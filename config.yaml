@@ -1,0 +1,7 @@
+#section 1: data paths: 
+data:
+  raw_data: data/transactions.csv
+  processed_data: data/processed/
+  train_file: train.csv
+  val_file: val.csv
+  test_file: test.csv
