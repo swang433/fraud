@@ -12,6 +12,8 @@ from sklearn.ensemble import RandomForestClassifier
 df = pd.read_csv('data/transactions.csv')
 df = df.drop(columns=['newbalanceOrig', 'newbalanceDest', 'isFlaggedFraud'])
 HOURS_IN_DAY = 24
+df = df.rename(columns={'oldbalanceOrg': 'oldbalanceOrig'})
+df = df.sort_values(['nameOrig', 'step'])
 print('data frame read and clean successful')
 
 '''
@@ -20,7 +22,7 @@ print('data frame read and clean successful')
 3. periodic time features via von Mises distribution
 '''
 
-# temporal features (not significant)
+# temporal features (not significant on their own)
 df['hour'] = df['step'] % HOURS_IN_DAY
 df['day'] = df['step'] // HOURS_IN_DAY
 df['peak_hours'] = ((df['hour'] >= 8) & (df['hour'] <= 21)).astype(int)
@@ -28,16 +30,24 @@ df['peak_hours'] = ((df['hour'] >= 8) & (df['hour'] <= 21)).astype(int)
 # user distinction features
 df['merchant_transaction_orig'] = df['nameOrig'].str.startswith('M').astype(int)
 df['merchant_transaction_dest'] = df['nameDest'].str.startswith('M').astype(int)
-df['merchant_transaction'] = (df['merchant_transaction_dest'] | df['merchant_transaction_orig']).astype(int)
+df['is_merchant'] = (df['merchant_transaction_dest'] | df['merchant_transaction_orig']).astype(int)
 
 # cost-based features
 df['large'] = (df['amount'] > 500000).astype(int)
 df['very_large'] = (df['amount'] > 2000000).astype(int)
-df['log_amount'] = np.log(df['amount'])
-df['percentage_sent'] = df['amount'] / df['oldbalanceOrg'] * 100
+df['log_amount'] = np.log(df['amount'].clip(lower=1e-10))
+df['percentage_sent'] = np.where(df['oldbalanceOrig'] <= 0, 100, df['amount'] / df['oldbalanceOrig'] * 100)
 df['balance_depleted'] = (df['percentage_sent'] == 100).astype(int)
 
-print(df[['large', 'very_large', 'log_amount', 'percentage_sent', 'balance_depleted']])
+#aggregated features
+df['user_avg_amount'] = df.groupby('nameOrig')['amount'].transform('mean')
+
+# More efficient rolling average calculation (NEED SQL INTEGRATION !!!)
+# df['amt_avg_L24hrs'] = df.groupby('nameOrig', group_keys=False)['amount'].apply(
+#     lambda x: x.rolling(window=24, min_periods=1).mean().shift(1)
+# )
+
+# print(df[['amt_avg_L24hrs', 'user_avg_amount']])
 
 # print(df.describe())
 print(df.columns)
