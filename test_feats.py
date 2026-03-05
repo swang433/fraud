@@ -6,7 +6,7 @@ import sklearn
 from sklearn.tree import DecisionTreeClassifier
 from sklearn.metrics import accuracy_score, confusion_matrix
 from sklearn.ensemble import RandomForestClassifier
-# import sqlite3 as db
+import sqlite3 as db
 # import hiplot as hip
 
 # read and clean dataframe (DROP FEATURES THAT COULD BE CONSIDERED CHEATING)
@@ -55,6 +55,6 @@ df['user_avg_amount'] = df.groupby('nameOrig')['amount'].transform('mean')
 # print(df[['amt_avg_L24hrs', 'user_avg_amount']])
 
 # print(df.describe())
-print(df.columns)
+print(df['user_avg_amount'].dropna().sort_values(['amount']))
 # print(df['amount'].median()) median is ~75k
 # print(df['merchant_transaction'])
