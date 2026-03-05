@@ -42,6 +42,22 @@ python main.py
 
 [To be added]
 
+## Issues Resolved
+
+Issue: 
+
+The multi-index intermediate structure created during the use of the groupby().rolling() functions caused complete memory exhaustion
+
+```python
+df['amt_avg_L24hrs'] = df.groupby('nameOrig', group_keys=False)['amount'].apply(
+    lambda x: x.rolling(window=24, min_periods=1).mean().shift(1)
+)
+```
+
+Solution: 
+
+Instead of performing expensive operations like rolling() in a memory-held dataframe, using SQLite window functions is significantly more memory efficient since it computes results row-by-row with O(1) space per window, eliminating the need for intermediate memory allocation. 
+
 ## Contributing
 
 Contributions welcome. Please open an issue first to discuss proposed changes.

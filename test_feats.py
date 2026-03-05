@@ -6,6 +6,7 @@ import sklearn
 from sklearn.tree import DecisionTreeClassifier
 from sklearn.metrics import accuracy_score, confusion_matrix
 from sklearn.ensemble import RandomForestClassifier
+# import sqlite3 as db
 # import hiplot as hip
 
 # read and clean dataframe (DROP FEATURES THAT COULD BE CONSIDERED CHEATING)
@@ -41,6 +42,10 @@ df['balance_depleted'] = (df['percentage_sent'] == 100).astype(int)
 
 #aggregated features
 df['user_avg_amount'] = df.groupby('nameOrig')['amount'].transform('mean')
+
+# Use this for better stability and speed
+# df['amt_avg_L24hrs'] = df.groupby('nameOrig')['amount'].rolling(24).mean().reset_index(level=0, drop=True)
+# print(df['amt_avg_L24hrs'])
 
 # More efficient rolling average calculation (NEED SQL INTEGRATION !!!)
 # df['amt_avg_L24hrs'] = df.groupby('nameOrig', group_keys=False)['amount'].apply(
