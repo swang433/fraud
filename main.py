@@ -3,11 +3,14 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sb
 import sklearn
-from sklearn.tree import DecisionTreeClassifier
+from xgboost import XGBClassifier
+# from sklearn.tree import DecisionTreeClassifier
 from sklearn.metrics import accuracy_score, confusion_matrix
 from sklearn.ensemble import RandomForestClassifier
+from sklearn.model_selection import train_test_split
 import sqlite3 as db
 import os
+from sklearn.metrics import classification_report, average_precision_score
 
 DB_PATH = 'data/transactions.db'
 
@@ -23,10 +26,11 @@ def test_main():
         df = df.sort_values(['nameOrig', 'step'])
         print('successfully cleaned dataframe')
         
-        #light feature engineering
+        #trivial feature engineering/encoding
         HRS_PER_DAY = 24
         df['hour'] = (df['step'] % HRS_PER_DAY).astype(int)
         df['day'] = (df['step'] // HRS_PER_DAY).astype(int)
+        df = pd.get_dummies(df, columns=['type'])
         
         #user related features
         df['to_merchant'] = df['nameDest'].str.startswith('M')
@@ -68,7 +72,7 @@ if __name__ == "__main__":
                 PARTITION BY nameDest
                 ORDER BY step
                 ROWS BETWEEN UNBOUNDED PRECEDING AND 1 PRECEDING
-            ), 0) AS total_received_dest,
+            ), 0) AS usr_total_received,
             
             COALESCE(COUNT(*) OVER (
                 PARTITION BY nameDest
@@ -78,6 +82,40 @@ if __name__ == "__main__":
 
         FROM (SELECT * FROM transactions_db ORDER BY nameOrig, step)
         """
+        
     df = pd.read_sql_query(query, conn) #read_sql_query returns a standard pandas dataframe
-    print(df)
+    df = df.drop(columns=['nameOrig', 'nameDest']) #XGBoost can only process numerical cols
+    x, y = df.drop('isFraud', axis=1), df['isFraud']
+    x_train, x_test, y_train, y_test = train_test_split(x, y, test_size=.2, random_state=42)
+    
+    #model selection
+    neg = (y_train == 0).sum()
+    pos = (y_train == 1).sum()
+    model = XGBClassifier(scale_pos_weight=neg/pos, random_state=42)
+    
+    #train and view results
+    model.fit(x_train, y_train)
+    y_pred = model.predict(x_test)
+    
+    '''
+    not a viable metric when it comes to model performance evaluation since 
+    the extreme class imbalance results in high accuracy with little effort
+    (the extremely small subset of fraudulent samples are what we want to detect)
+    '''
+    accuracy = accuracy_score(y_pred, y_test)
+    print('Model accuracy: ' + str(100 * accuracy) + '%')
+    
+    '''
+    precision: of every flagged sample how many were actually really fraud 
+    (true positives) / (true + false positives)
+                
+    recall: of every real fraudulent samples, how many were detected
+    (true positives) / (true positives + false negatives) 
+    
+    in a balanced-class dataset, usage of both PR AUC and ROC AUC are permitted since
+    the data isn't dominated by negatives
+    '''
+    print(classification_report(y_test, y_pred))
+    print('PR AUC:', average_precision_score(y_test, model.predict_proba(x_test)[:, 1]))
+    
     conn.close()
