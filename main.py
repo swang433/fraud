@@ -14,9 +14,8 @@ from sklearn.metrics import classification_report, average_precision_score
 
 DB_PATH = 'data/transactions.db'
 
-def test_main():
+def test_main(): #main function for feature engineering 
     if not os.path.exists(DB_PATH): 
-        
         #read and clean df
         df = pd.read_csv('data/transactions.csv')
         print('successfully read dataframe')
@@ -48,6 +47,29 @@ def test_main():
         df.to_sql(name='transactions_db', con=conn, if_exists='replace', index=False)
         conn.close()
         print('successfully created database')
+        
+def savings(y_true, y_prob, amts, cost_per_fp=2): #purely for model evaluation 
+    '''
+    works well for datasets with extreme class imbalance; 
+    business-centric metric for how much money is saved after running the model 
+    cost_fn is the transaction value by default (lose if false negative)
+    
+    intuition: 
+    for every threshold there is, use a set savings function (
+        amount caught, or sum of true positives - cost - amount lost, or sum of false negatives    
+    )
+    to estimate the amount
+    of money saved after running the model
+    '''
+    best_savings, best_thresh = 0, .5
+    for curr_thresh in np.arange(.01, 1, .01):
+        y_pred = (y_prob >= curr_thresh).astype(int)
+        tp, fp = (y_pred == 1) & (y_true == 1), (y_pred == 1) & (y_true == 0)
+        tn, fn = (y_pred == 0) & (y_true == 0), (y_pred == 0) & (y_true == 1)
+        curr_savings = amts[tp].sum() - (cost_per_fp * fp.sum()) - amts[fn].sum()
+        if curr_savings > best_savings: 
+            best_savings, best_thresh = curr_savings, curr_thresh
+        return best_savings, best_thresh
     
 if __name__ == "__main__":
     test_main()
@@ -86,7 +108,7 @@ if __name__ == "__main__":
     df = pd.read_sql_query(query, conn) #read_sql_query returns a standard pandas dataframe
     df = df.drop(columns=['nameOrig', 'nameDest']) #XGBoost can only process numerical cols
     x, y = df.drop('isFraud', axis=1), df['isFraud']
-    x_train, x_test, y_train, y_test = train_test_split(x, y, test_size=.2, random_state=42)
+    x_train, x_test, y_train, y_test = train_test_split(x, y, test_size=.2, random_state=42, stratify=df['isFraud'])
     
     #model selection
     neg = (y_train == 0).sum()
@@ -117,5 +139,6 @@ if __name__ == "__main__":
     '''
     print(classification_report(y_test, y_pred))
     print('PR AUC:', average_precision_score(y_test, model.predict_proba(x_test)[:, 1]))
-    
+    savings_value, threshold = savings(y_test.values, model.predict_proba(x_test)[:, 1], x_test['amount'].values)
+    print(f'Best savings: ${savings_value:,.2f} at threshold {threshold:.2f}')
     conn.close()

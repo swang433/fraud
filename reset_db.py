@@ -7,7 +7,7 @@ def reset_db():
     if not os.path.exists(DB_PATH): 
         print('no file found at {DB_PATH}')
     else: 
-        print('database found at {DB_PATH}, removing and cleaning slate')
+        print('database found, removing and cleaning slate')
         os.remove(DB_PATH)
         print('database removed')
 
