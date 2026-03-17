@@ -11,38 +11,24 @@ from sklearn.model_selection import train_test_split
 import sqlite3 as db
 import os
 from sklearn.metrics import classification_report, average_precision_score
+import joblib
+from data import feat_eng
 
 DB_PATH = 'data/transactions.db'
 
-def test_main(): #main function for feature engineering 
-    if not os.path.exists(DB_PATH): 
-        #read and clean df
+def test_main():
+    needs_rebuild = not os.path.exists(DB_PATH)  # fix 1: inverted logic
+    if not needs_rebuild:
+        conn = db.connect(DB_PATH)
+        cols = pd.read_sql_query('SELECT * FROM transactions_db LIMIT 1', conn).columns.tolist()  # fix 2: pd not db
+        conn.close()
+        if 'isFraud' not in cols or 'nameDest' not in cols:
+            needs_rebuild = True
+
+    if needs_rebuild:
         df = pd.read_csv('data/transactions.csv')
         print('successfully read dataframe')
-        df = df.drop(columns=['newbalanceOrig', 'newbalanceDest', 'isFlaggedFraud'])
-        print('cheating columns dropped')
-        df = df.rename(columns={'oldbalanceOrg': 'oldbalanceOrig'})
-        df = df.sort_values(['nameOrig', 'step'])
-        print('successfully cleaned dataframe')
-        
-        #trivial feature engineering/encoding
-        HRS_PER_DAY = 24
-        df['hour'] = (df['step'] % HRS_PER_DAY).astype(int)
-        df['day'] = (df['step'] // HRS_PER_DAY).astype(int)
-        df = pd.get_dummies(df, columns=['type'])
-        
-        #user related features
-        df['to_merchant'] = df['nameDest'].str.startswith('M')
-        # df['from_merchant'] = df['nameOrig'].str.startswith('M') always false
-        # df['is_merchant'] = (df['to_merchant'] | df['from_merchant']).astype(int)
-        
-        # cost-based features
-        df['large'] = (df['amount'] > 500000).astype(int)
-        df['very_large'] = (df['amount'] > 2000000).astype(int)
-        df['log_amount'] = np.log1p(df['amount'])
-        df['percentage_sent'] = np.where(df['oldbalanceOrig'] <= 0, 100, df['amount'] / df['oldbalanceOrig'] * 100)
-        df['balance_depleted'] = (df['percentage_sent'] == 100).astype(int)
-        
+        df = feat_eng(df, drop_ids=False)
         conn = db.connect(DB_PATH)
         df.to_sql(name='transactions_db', con=conn, if_exists='replace', index=False)
         conn.close()
@@ -61,16 +47,16 @@ def savings(y_true, y_prob, amts, cost_per_fp=2): #purely for model evaluation
     to estimate the amount
     of money saved after running the model
     '''
-    best_savings, best_thresh = 0, .5
-    for curr_thresh in np.arange(.01, 1, .01):
-        y_pred = (y_prob >= curr_thresh).astype(int)
+    best_savings, best_threshold = 0, .5
+    for threshold in np.arange(.01, 1, .01): 
+        y_pred = (y_prob > threshold).astype(int)
         tp, fp = (y_pred == 1) & (y_true == 1), (y_pred == 1) & (y_true == 0)
-        tn, fn = (y_pred == 0) & (y_true == 0), (y_pred == 0) & (y_true == 1)
-        curr_savings = amts[tp].sum() - (cost_per_fp * fp.sum()) - amts[fn].sum()
-        if curr_savings > best_savings: 
-            best_savings, best_thresh = curr_savings, curr_thresh
-    return best_savings, best_thresh
-    
+        fn = (y_pred == 0) & (y_true == 1)
+        curr_saving = amts[tp].sum() - cost_per_fp * fp.sum() - amts[fn].sum()
+        if curr_saving > best_savings: 
+            best_savings, best_threshold = curr_saving, threshold
+    return best_savings, best_threshold
+
 if __name__ == "__main__":
     test_main()
     conn = db.connect(DB_PATH)
@@ -102,7 +88,7 @@ if __name__ == "__main__":
                 ROWS BETWEEN UNBOUNDED PRECEDING AND 1 PRECEDING
             ), 0) AS usr_num_tx_dest
 
-        FROM (SELECT * FROM transactions_db ORDER BY nameOrig, step)
+        FROM (SELECT * FROM transactions_db ORDER BY step)
         """
         
     df = pd.read_sql_query(query, conn) #read_sql_query returns a standard pandas dataframe
@@ -115,8 +101,11 @@ if __name__ == "__main__":
     pos = (y_train == 1).sum()
     model = XGBClassifier(scale_pos_weight=neg/pos, random_state=42)
     
-    #train and view results
+    #train, and save model, then view results in terminal
     model.fit(x_train, y_train)
+    #save after training
+    os.makedirs('models', exist_ok=True)
+    joblib.dump(model, 'models/fraud_model.pkl')
     y_pred = model.predict(x_test)
     
     '''
@@ -141,4 +130,5 @@ if __name__ == "__main__":
     print('PR AUC:', average_precision_score(y_test, model.predict_proba(x_test)[:, 1]))
     savings_value, threshold = savings(y_test.values, model.predict_proba(x_test)[:, 1], x_test['amount'].values)
     print(f'Best savings: ${savings_value:,.2f} at threshold {threshold:.2f}')
+
     conn.close()

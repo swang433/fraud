@@ -5,9 +5,9 @@ import pandas
 def reset_db():
     DB_PATH = 'data/transactions.db'
     if not os.path.exists(DB_PATH): 
-        print('no file found at {DB_PATH}')
+        print(f'no file found at {DB_PATH}')
     else: 
-        print('database found, removing and cleaning slate')
+        print(f'database found at {DB_PATH}, removing and cleaning slate')
         os.remove(DB_PATH)
         print('database removed')
 
