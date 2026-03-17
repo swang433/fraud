@@ -69,7 +69,7 @@ def savings(y_true, y_prob, amts, cost_per_fp=2): #purely for model evaluation
         curr_savings = amts[tp].sum() - (cost_per_fp * fp.sum()) - amts[fn].sum()
         if curr_savings > best_savings: 
             best_savings, best_thresh = curr_savings, curr_thresh
-        return best_savings, best_thresh
+    return best_savings, best_thresh
     
 if __name__ == "__main__":
     test_main()
