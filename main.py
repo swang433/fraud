@@ -12,11 +12,11 @@ import sqlite3 as db
 import os
 from sklearn.metrics import classification_report, average_precision_score
 import joblib
-from data import feat_eng
+from data import feat_eng, savings
 
 DB_PATH = 'data/transactions.db'
 
-def test_main():
+def build_db():
     needs_rebuild = not os.path.exists(DB_PATH)  # fix 1: inverted logic
     if not needs_rebuild:
         conn = db.connect(DB_PATH)
@@ -34,31 +34,9 @@ def test_main():
         conn.close()
         print('successfully created database')
         
-def savings(y_true, y_prob, amts, cost_per_fp=2): #purely for model evaluation 
-    '''
-    works well for datasets with extreme class imbalance; 
-    business-centric metric for how much money is saved after running the model 
-    cost_fn is the transaction value by default (lose if false negative)
-    
-    intuition: 
-    for every threshold there is, use a set savings function (
-        amount caught, or sum of true positives - cost - amount lost, or sum of false negatives    
-    )
-    to estimate the amount
-    of money saved after running the model
-    '''
-    best_savings, best_threshold = 0, .5
-    for threshold in np.arange(.01, 1, .01): 
-        y_pred = (y_prob > threshold).astype(int)
-        tp, fp = (y_pred == 1) & (y_true == 1), (y_pred == 1) & (y_true == 0)
-        fn = (y_pred == 0) & (y_true == 1)
-        curr_saving = amts[tp].sum() - cost_per_fp * fp.sum() - amts[fn].sum()
-        if curr_saving > best_savings: 
-            best_savings, best_threshold = curr_saving, threshold
-    return best_savings, best_threshold
 
 if __name__ == "__main__":
-    test_main()
+    build_db()
     conn = db.connect(DB_PATH)
     
     query = """
