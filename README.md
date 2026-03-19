@@ -94,11 +94,11 @@ Precompute.py resolves this, since there typically would be a separate variable 
 
 Issue: 
 
-lorem ipsum
+Training vs api-serving data skew and inconsistency. When building the api that serves inferences results, I failed to consider that the raw csv used for testing does not include the behavior time sensitive features mentioned above. 
 
 Solution: 
 
-lorem ipsum
+Also resolved with precompute.py since it computes the same features that the model needs for the training process. 
 
 Issue: 
 
@@ -107,7 +107,3 @@ lorem ipsum
 Solution: 
 
 lorem ipsum
-
-## Contributing
-
-Contributions welcome. Please open an issue first to discuss proposed changes.
