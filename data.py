@@ -18,7 +18,7 @@ def feat_eng(df, drop_ids = True): #main function for computing features
     df['balance_depleted'] = (df['percentage_sent'] == 100).astype(int)
     return df
 
-def savings(y_true, y_prob, amts, cost_per_fp=2): #purely for model evaluation 
+def savings(y_true, y_prob, amts, cost_per_fp=2): #purely for monetary evaluation 
     '''
     works well for datasets with extreme class imbalance; 
     business-centric metric for how much money is saved after running the model 

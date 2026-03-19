@@ -14,6 +14,7 @@ async def predict_fraud(file: UploadFile = File(...)):
     df = df.drop(columns=['isFraud'], errors='ignore')  # in case it's in the uploaded CSV
     df = feat_eng(df)
     
+    #throws an exception instead of internal server error
     required = ['avg_amt_rec_L24hrs', 'tx_count_L24hrs_dest', 'usr_total_received', 'usr_num_tx_dest']
     missing = [col for col in required if col not in df.columns]
     if missing:
@@ -27,4 +28,4 @@ async def predict_fraud(file: UploadFile = File(...)):
 def root(): 
     return {'status': 'online', 'model': 'XGBoost Fraud Detector'}
 
-# NOTE: run main, precompute, then deploy api
+# NOTE: run main, precompute, then start api: fastapi dev app.py

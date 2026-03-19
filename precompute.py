@@ -4,6 +4,10 @@ import sqlite3 as db
 DB_PATH, SAMPLE_PATH = 'data/transactions.db', 'data/samples.csv'
 
 '''
+parsing a whole dataframe into an api-based model is not viable, so this file
+computes some of the missing features the model needs and extracts 100 samples 
+for the api to send to the model
+
 use a sqlite query to compute rolling and expanding features: 
 compute avg_amt_rec_L24hrs, tx_count_L24hrs_dest, usr_total_received, usr_num_tx_dest
 
