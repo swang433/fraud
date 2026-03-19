@@ -73,7 +73,7 @@ if __name__ == "__main__":
     df = df.drop(columns=['nameOrig', 'nameDest']) #XGBoost can only process numerical cols
     x, y = df.drop('isFraud', axis=1), df['isFraud']
     x_train, x_test, y_train, y_test = train_test_split(x, y, test_size=.2, random_state=42, stratify=df['isFraud'])
-    print(x_train.columns)
+    # print(x_train.columns)
     
     #model selection
     neg = (y_train == 0).sum()
