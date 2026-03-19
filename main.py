@@ -17,10 +17,10 @@ from data import feat_eng, savings
 DB_PATH = 'data/transactions.db'
 
 def build_db():
-    needs_rebuild = not os.path.exists(DB_PATH)  # fix 1: inverted logic
+    needs_rebuild = not os.path.exists(DB_PATH)
     if not needs_rebuild:
         conn = db.connect(DB_PATH)
-        cols = pd.read_sql_query('SELECT * FROM transactions_db LIMIT 1', conn).columns.tolist()  # fix 2: pd not db
+        cols = pd.read_sql_query('SELECT * FROM transactions_db LIMIT 1', conn).columns.tolist()
         conn.close()
         if 'isFraud' not in cols or 'nameDest' not in cols:
             needs_rebuild = True
@@ -73,6 +73,7 @@ if __name__ == "__main__":
     df = df.drop(columns=['nameOrig', 'nameDest']) #XGBoost can only process numerical cols
     x, y = df.drop('isFraud', axis=1), df['isFraud']
     x_train, x_test, y_train, y_test = train_test_split(x, y, test_size=.2, random_state=42, stratify=df['isFraud'])
+    print(x_train.columns)
     
     #model selection
     neg = (y_train == 0).sum()
