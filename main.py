@@ -3,6 +3,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sb
 import sklearn
+import yaml
 from xgboost import XGBClassifier
 # from sklearn.tree import DecisionTreeClassifier
 from sklearn.metrics import accuracy_score, confusion_matrix
@@ -14,7 +15,10 @@ from sklearn.metrics import classification_report, average_precision_score
 import joblib
 from data import feat_eng, savings
 
-DB_PATH = 'data/transactions.db'
+with open('config.yaml') as f: 
+    config = yaml.safe_load(f)
+
+DB_PATH = config['raw_data']['db']
 
 def build_db():
     needs_rebuild = not os.path.exists(DB_PATH)
@@ -26,7 +30,7 @@ def build_db():
             needs_rebuild = True
 
     if needs_rebuild:
-        df = pd.read_csv('data/transactions.csv')
+        df = pd.read_csv(config['raw_data']['csv'])
         print('successfully read dataframe')
         df = feat_eng(df, drop_ids=False)
         conn = db.connect(DB_PATH)

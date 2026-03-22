@@ -57,9 +57,11 @@ python main.py; python precompute; fastapi dev app.py
 └── tests/          # Unit tests
 ```
 
-## License
+## Testing via Pytest
 
-[To be added]
+```bash
+pytest tests/unit_tests.py -v
+```
 
 ## Issues Resolved
 
@@ -102,8 +104,16 @@ Also resolved with precompute.py since it computes the same features that the mo
 
 Issue: 
 
-lorem ipsum
+Improper use of train_test_split allowed future data to leak into the current rolling/window function; since transactions are time-ordered, a random call of train_test_split could result in the 200th inference being trained on features from the 500th sample.
 
 Solution: 
 
-lorem ipsum
+Simply using sort_values('step) before any form of splitting suffices. 
+
+Issue: 
+
+The feature "percentage_sent" was originally calculated with amount / oldBalanceOrig * 100, but this does not account for scenarios where oldBalanceOrig is less than the amount sent, possibly resulting in dividing by 0 errors. 
+
+Solution: 
+
+Using np.where() guard that returns 100 when the transaction amount is greater than oldbalanceOrig, indicating balance depletion. 
