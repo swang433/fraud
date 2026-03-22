@@ -1,4 +1,7 @@
 raw_data: 
   csv: 'data/transactions.csv'
   db: 'data/transactions.db'
+  sample: 'data/sample.csv'
+model: 
+  serve: 'models/fraud_model.pkl'
   

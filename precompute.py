@@ -1,7 +1,9 @@
 import pandas as pd
 import sqlite3 as db
+import yaml
 
-DB_PATH, SAMPLE_PATH = 'data/transactions.db', 'data/samples.csv'
+with open('config.yaml') as f: 
+    config = yaml.safe_load(f)
 
 '''
 parsing a whole dataframe into an api-based model is not viable, so this file
@@ -50,8 +52,8 @@ query = """
     
     FROM (SELECT * FROM transactions_db ORDER BY step)
     """
-conn = db.connect(DB_PATH)
+conn = db.connect(config['raw_data']['db'])
 df = pd.read_sql_query(query, conn)
 conn.close()
-df.sample(100).to_csv(SAMPLE_PATH, index=False)
+df.sample(100).to_csv(config['raw_data']['sample'], index=False)
 print('feature precomputation complete')

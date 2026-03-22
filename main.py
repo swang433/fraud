@@ -88,7 +88,7 @@ if __name__ == "__main__":
     model.fit(x_train, y_train)
     #save after training
     os.makedirs('models', exist_ok=True)
-    joblib.dump(model, 'models/fraud_model.pkl')
+    joblib.dump(model, config['model']['serve'])
     y_pred = model.predict(x_test)
     
     '''

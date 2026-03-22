@@ -3,9 +3,12 @@ import joblib
 import io
 import pandas as pd
 from data import feat_eng
+import yaml
 
+with open('config.yaml') as f: 
+    config = yaml.safe_load(f)
 app = FastAPI(title='Transaction Fraud Detector API')
-model = joblib.load('models/fraud_model.pkl')
+model = joblib.load(config['model']['serve'])
 
 @app.post('/predict')
 async def predict_fraud(file: UploadFile = File(...)):
